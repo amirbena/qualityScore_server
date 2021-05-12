@@ -1,60 +1,57 @@
 package com.example.server.controllers;
 
 import com.example.server.data.GetPetsBody;
-import com.example.server.data.Pagination;
-import com.example.server.data.Pet;
-import com.example.server.externalResponses.Animal;
-import com.example.server.externalResponses.GetAnimalsResponse;
-import org.springframework.beans.factory.annotation.Value;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import com.example.server.data.Types;
+import com.example.server.helpers.AllPetsHelper;
+import com.example.server.helpers.AllTypesHelper;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
-
-import java.util.ArrayList;
+import java.net.URI;
 import java.util.Map;
-import java.util.Optional;
 
 @RequestMapping("/api")
 @RestController()
 public class MainController {
 
-    private final String EXTERNAL_API="https://api.petfinder.com/v2/";
 
-    @Value("${Secret}")
-    private String token;
+    private final String EXTERNAL_API="https://api.petfinder.com/v2/";
 
     private RestTemplate restTemplate=new RestTemplate();
 
-    private HttpEntity createEntityHttpHeaders(){
-        HttpHeaders headers= new HttpHeaders();
-        headers.add("Authorization", "Bearer "+token);
-        HttpEntity entity = new HttpEntity(headers);
-        return entity;
+    private HttpEntity entity= AllPetsHelper.createEntityHttpHeaders(restTemplate,EXTERNAL_API);
+
+    @GetMapping("/pets")
+    public GetPetsBody getPets(@RequestParam Map<String,String> allRequestParams){
+        try {
+            URI uriBuildWithParams= AllPetsHelper.buildURIWithQueryParams(EXTERNAL_API,allRequestParams);
+            String responseBody = restTemplate.exchange(uriBuildWithParams, HttpMethod.GET, this.entity, String.class).getBody();
+            return AllPetsHelper.buildResponseAccordingExternalResponse(responseBody);
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Response Can't convert to json"
+            );
+        }
     }
 
-    private HttpEntity entity= createEntityHttpHeaders();
-
-    @GetMapping("/getPets")
-    public GetPetsBody getPets(@RequestParam Optional<Map<String, String>> allRequestParams){
-        String getAnimalsAPI = this.EXTERNAL_API + "animals";
-        GetAnimalsResponse response= restTemplate.exchange(getAnimalsAPI, HttpMethod.GET,this.entity,GetAnimalsResponse.class,allRequestParams).getBody();
-        Pagination pagination=new Pagination(response.getPagination().getCount_per_page(),response.getPagination().getTotal_count(),response.getPagination().getCurrent_page(),response.getPagination().getTotal_pages());
-        ArrayList<Pet> pets= new ArrayList<Pet>();
-        for(int i=0; i<response.getAnimals().size(); i++){
-            Animal animal= response.getAnimals().get(i);
-            String image= animal.getPhotos().get(0).getMedium();
-            Pet pet= new Pet(image,animal.getName(),animal.getBreeds().getPrimary(),animal.getGender(),animal.getAge(),animal.getAnimalType());
-            pets.add(pet);
+    @GetMapping("/petTypes")
+    public Types getTypes(){
+        String url= this.EXTERNAL_API+ "types";
+        try{
+            String responseBody = restTemplate.exchange(url, HttpMethod.GET, this.entity, String.class).getBody();
+            return AllTypesHelper.getAllTypesAccordingHttpResponse(responseBody);
         }
-        GetPetsBody body= new GetPetsBody(pets,pagination);
-        return body;
+        catch(Exception e){
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Response Can't convert to json"
+            );
+        }
+
     }
 }
