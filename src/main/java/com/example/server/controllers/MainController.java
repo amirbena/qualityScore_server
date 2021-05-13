@@ -14,6 +14,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+@CrossOrigin(origins="*")
 @RequestMapping("/api")
 @RestController()
 public class MainController {

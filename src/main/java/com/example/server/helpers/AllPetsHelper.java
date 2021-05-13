@@ -48,7 +48,7 @@ public class AllPetsHelper {
         ArrayList<Pet> pets= new ArrayList<>();
         for (JsonNode petNode: petsNode) {
             JsonNode imagesArray=petNode.get(IMAGES);
-            String image= imagesArray.size()> 0? imagesArray.get(0).get("full").asText() :null;
+            String image= imagesArray.size()> 0? imagesArray.get(0).get("medium").asText() :null;
             String name= petNode.get(NAME).asText();
             String primaryBreed= petNode.get(BREEDS).get(PRIMARY).asText();
             String gender= petNode.get(GENDER).asText();
